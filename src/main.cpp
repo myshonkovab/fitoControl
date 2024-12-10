@@ -10,8 +10,6 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-#include <settings.cpp>
-#include <gsheet.cpp>
 #include <browser.cpp>
 
 // SETTINGS
