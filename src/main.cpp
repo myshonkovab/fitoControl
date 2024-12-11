@@ -1,25 +1,28 @@
-/* Turn on/off lamps for different periods
- */
-// Объем памяти EEPROM = 4096 Б ? In Arduino you call EEPROM.begin(), but in ESP8266 you have to call EEPROM.begin(n), where n is the total number of bytes you will need.
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>             // OTA etc
 #include <ESP8266WebServer.h>        // OTA
 #include <ESP8266HTTPUpdateServer.h> //OTA
-#include <EEPROM.h>
-#include <SoftwareSerial.h>
-#include <Wire.h>
 
 #include <browser.cpp>
+#include <Dali.h>
 
 // SETTINGS
-const bool OTAEnabled = true; // OTA
+const bool OTAEnabled = true;     // OTA
 const bool browserEnabled = true; // Включение выключение сервера (для удобства скрытия блоков кода)
 const bool wireEnabled = false;   //(для удобства скрытия блоков кода)
 
-byte typeLightCntrl = 1;
+byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
+const int DALI_TX = 1;    // A1
+const int DALI_RX_A = A0; // A2
+uint8_t adressConstFlux = 6;
+uint8_t maxCostFlux = 100;
+uint8_t adressParabFlux = 7;
+uint8_t maxParabFlux = 150;
+String browserString1;
+String browserString2;
 
 // Default
 bool showResults = false;
@@ -28,9 +31,6 @@ bool startMeasure = false;
 
 // define pins
 const byte relayPin[] = {15, 12, 13, 2}; //! PWM //{15, 12, 13, 2}
-// контакт GPIO2 на ESP8266  - cвязан со светодиодом, который на плате
-/// const byte lightPinMRGB[] = {15, 12, 13, 2}; //пин 0 - выход ШИМ первого светильника
-
 // для данного эксперимента принимаем, что сутки длятся 48 часов (для удобства программирования)
 // Задаем длительность каждого периода включенного и выключенного состояния (первая цифра - часы, вторая цифра - минуты)
 bool lampStatus[4]; // состояние ламп
@@ -42,15 +42,6 @@ const int timeSets[4][4][4] = {
     {{0, 7, 21, 00}, {24 + 7, 0, 24 + 21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}, // 14+14
     {{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
 };
-/*Для первого эксперимента было:
-{{19, 0, 47, 00}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
-    {{9, 0, 23, 00}, {33, 0, 47, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
-    {{0, 0, 6, 0}, {11, 0, 18, 0}, {23, 0, 30, 0}, {35, 0, 42, 0}}, //6+7+7+7 - похоже ошибка была
-    {{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
-*/
-
-// uint8_t i2c_rcv = 255; // data received from I2C bus
-// SoftwareSerial arduinoSerial(15, 13); //GPIO15 (TX) and GPIO13 (RX)
 
 const char *ssid = "RT-GPON-37C8";   //"GonioRad2.4G";//"DIR-615T-74CC"; // ssid = "ROSTELECOM_CB50";  "DIR-615T-74CC"    "M-Redmi"
 const char *password = "Bgnagz3aL1"; //"astz2023";//"44220846";    // password = "734GFTCN";      "44220846"  "Moward-WiFi"
@@ -75,7 +66,7 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 
 WiFiServer server(80); //  порт веб-сервера
 
-void Browser(bool lampPosition[4], String formattedTime)
+void Browser(bool lampPosition[4], String formattedTime, String browserString1, String browserString2)
 {
   Serial.println(" Вывод информации браузера");
   unsigned int timer = millis();
@@ -108,16 +99,18 @@ void Browser(bool lampPosition[4], String formattedTime)
 
   // Вывод текущих значений освещенности
   client.println("Now " + formattedTime + "<br>");
- for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 3; i++)
   {
     client.println("box" + String(i + 1) + " = " + String(!lampPosition[i]) + "<br>");
   }
-
+  client.println(browserString1);
+  client.println("<br>");
   client.println("<br>");
   client.println("Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
   client.println("</body>");
   client.println("</html>");
 }
+
 void handleNotFound() // OTA
 {
   HttpServer.send(404, "text/plain", "404: Not found... <a href=\"/firmware\">firmware</a> <br>");
@@ -161,8 +154,16 @@ void setup()
     break;
 
   case 2:
+    pinMode(DALI_TX, OUTPUT);
+    Serial.println("start DALI control");
+    dali.setupTransmit(DALI_TX);        // устанавливаем цифровой выход для передачи сообщений
+    dali.setupAnalogReceive(DALI_RX_A); // устанавливаем аналоговый вход для приема сообщений
+    dali.msgMode = true;
+    dali.busTest(); // тестируем шину
+
     break;
   }
+
   delay(1);
 
   if (OTAEnabled)
@@ -180,8 +181,10 @@ void loop()
   unsigned long currentTime = timeClient.getEpochTime();
 
   Serial.println(timeClient.getFormattedTime());
-  int currrentMin = (currentTime % 172800) / 60;
-  Serial.println(currrentMin);
+  int currrentMin = (currentTime % 86400) / 60;
+
+  int currrentMin48h = (currentTime % 172800) / 60;
+  Serial.println(currrentMin48h);
 
   switch (typeLightCntrl)
   {
@@ -196,7 +199,7 @@ void loop()
         int onT = timeSets[i][j][0] * 60 + timeSets[i][j][1];  // время включения
         int offT = timeSets[i][j][2] * 60 + timeSets[i][j][3]; // время выключния
         Serial.print(" :: Период" + String(j) + ": OnT=" + String(onT) + " offT=" + String(offT));
-        if ((currrentMin > onT) & (currrentMin < offT))
+        if ((currrentMin48h > onT) & (currrentMin48h < offT))
           lampOn = true;
       }
 
@@ -213,8 +216,22 @@ void loop()
         Serial.println(" :::: Откл");
       }
     }
-break;
+    break;
   case 2:
+
+    dali.transmit((adressConstFlux) << 1, maxCostFlux);
+    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(maxCostFlux));
+
+    // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
+    float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+    uint8_t parabFlux;
+    if (parabFluxCalc > 0)
+      parabFlux = int(parabFlux);
+    else
+      parabFlux = 0;
+    dali.transmit((adressParabFlux) << 1, parabFlux);
+    Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
+    browserString1 = String(currrentMin) + "Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux);
     break;
   }
 
@@ -222,7 +239,7 @@ break;
   {
     HttpServer.handleClient(); // Прослушивание HTTP-запросов от клиентов
   }
-  delay(1 * 1000);
+  delay(5 * 1000);
 
-  Browser(lampStatus, timeClient.getFormattedTime());
+  Browser(lampStatus, timeClient.getFormattedTime(), browserString1, browserString2);
 }
