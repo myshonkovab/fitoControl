@@ -13,12 +13,13 @@
 #include <browser.cpp>
 
 // SETTINGS
-const int build = 5;
 const bool OTAEnabled = true; // OTA
-const bool gSheetEnabled = false;
-const bool printResultLux = false;
 const bool browserEnabled = true; // Включение выключение сервера (для удобства скрытия блоков кода)
 const bool wireEnabled = false;   //(для удобства скрытия блоков кода)
+
+byte typeLightCntrl = 1;
+// 1 - 3box
+// 2 - dali const and parabolic illuminance
 
 // Default
 bool showResults = false;
@@ -36,9 +37,9 @@ bool lampStatus[4]; // состояние ламп
 const int timeSets[4][4][4] = {
     // ч, м вкл, ч, м выкл //еще одна //еще одна // еще одна
     // Принимаем продолжительность светлого 14 часов, темного 10 часов в сутки
-    {{0, 7, 21, 00}, {24+7, 0, 24+21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},   // 14+14
-    {{0, 7, 21, 00}, {24+7, 0, 24+21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},   // 14+14
-    {{0, 7, 21, 00}, {24+7, 0, 24+21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},   // 14+14
+    {{0, 7, 21, 00}, {24 + 7, 0, 24 + 21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}, // 14+14
+    {{0, 7, 21, 00}, {24 + 7, 0, 24 + 21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}, // 14+14
+    {{0, 7, 21, 00}, {24 + 7, 0, 24 + 21, 0}, {-1, -1, -1, -1}, {-1, -1, -1, -1}}, // 14+14
     {{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
 };
 /*Для первого эксперимента было:
@@ -51,8 +52,8 @@ const int timeSets[4][4][4] = {
 // uint8_t i2c_rcv = 255; // data received from I2C bus
 // SoftwareSerial arduinoSerial(15, 13); //GPIO15 (TX) and GPIO13 (RX)
 
-const char *ssid = "GonioRad2.4G";//"DIR-615T-74CC"; // ssid = "ROSTELECOM_CB50";  "DIR-615T-74CC"    "M-Redmi"
-const char *password = "astz2023";//"44220846";    // password = "734GFTCN";      "44220846"  "Moward-WiFi"
+const char *ssid = "RT-GPON-37C8";   //"GonioRad2.4G";//"DIR-615T-74CC"; // ssid = "ROSTELECOM_CB50";  "DIR-615T-74CC"    "M-Redmi"
+const char *password = "Bgnagz3aL1"; //"astz2023";//"44220846";    // password = "734GFTCN";      "44220846"  "Moward-WiFi"
 
 // OTA
 #define OTAUSER "admin"                  // OTA Логин для входа в OTA
@@ -102,13 +103,12 @@ void Browser(bool lampPosition[4], String formattedTime)
   client.println(" <body>");
 
   client.println("IP: ");
-   client.print(WiFi.localIP());
-   client.println("<br>");
+  client.print(WiFi.localIP());
+  client.println("<br>");
 
   // Вывод текущих значений освещенности
   client.println("Now " + formattedTime + "<br>");
-  client.println("build = " + String(build) + "<br>");
-  for (int i = 0; i < 3; i++)
+ for (int i = 0; i < 3; i++)
   {
     client.println("box" + String(i + 1) + " = " + String(!lampPosition[i]) + "<br>");
   }
@@ -127,15 +127,12 @@ void setup()
 {
   timeClient.begin(); // NTPClient
   Serial.begin(9600);
-  // arduinoSerial.begin(9600);
-  //  Wire.begin(1,2); // join I2C bus as Master
-
   while (!Serial)
     delay(99); // ждем открытия монитора порта в IDE Arduino
 
   // подключаемся к WiFi-сети:
   Serial.println();
-  Serial.print("Connecting to "); //  "Подключение к "
+  Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
@@ -146,22 +143,26 @@ void setup()
   Serial.println("");
   Serial.println("WiFi connected");
 
-  
-
   // запускаем сервер:
   server.begin();
-  Serial.println("Server started"); //  "Сервер запущен"
-
+  Serial.println("Server started");
   // печатаем IP-адрес:
   Serial.print("Use this URL to connect: http://");
   Serial.print(WiFi.localIP());
   Serial.println("/");
 
-  for (int i = 0; i < 4; i++)
+  switch (typeLightCntrl)
   {
-    pinMode(relayPin[i], OUTPUT);
-  }
+  case 1:
+    for (int i = 0; i < 4; i++)
+    {
+      pinMode(relayPin[i], OUTPUT);
+    }
+    break;
 
+  case 2:
+    break;
+  }
   delay(1);
 
   if (OTAEnabled)
@@ -181,32 +182,40 @@ void loop()
   Serial.println(timeClient.getFormattedTime());
   int currrentMin = (currentTime % 172800) / 60;
   Serial.println(currrentMin);
-  for (byte i = 0; i < 4; i++) // перебор ламп (боксков)
+
+  switch (typeLightCntrl)
   {
-    bool lampOn = false;
-    Serial.println("Бокс" + String(i) + ": ");
+  case 1:
+    for (byte i = 0; i < 4; i++) // перебор ламп (боксков)
+    {
+      bool lampOn = false;
+      Serial.println("Бокс" + String(i) + ": ");
 
-    for (byte j = 0; j < 4; j++) // Перебор временных отрезков (заложено, что максимум четыре возможно)
-    {
-      int onT = timeSets[i][j][0] * 60 + timeSets[i][j][1];  // время включения
-      int offT = timeSets[i][j][2] * 60 + timeSets[i][j][3]; // время выключния
-      Serial.print(" :: Период" + String(j) + ": OnT=" + String(onT) + " offT=" + String(offT));
-      if ((currrentMin > onT) & (currrentMin < offT))
-        lampOn = true;
-    }
+      for (byte j = 0; j < 4; j++) // Перебор временных отрезков (заложено, что максимум четыре возможно)
+      {
+        int onT = timeSets[i][j][0] * 60 + timeSets[i][j][1];  // время включения
+        int offT = timeSets[i][j][2] * 60 + timeSets[i][j][3]; // время выключния
+        Serial.print(" :: Период" + String(j) + ": OnT=" + String(onT) + " offT=" + String(offT));
+        if ((currrentMin > onT) & (currrentMin < offT))
+          lampOn = true;
+      }
 
-    if (!lampOn)
-    {
-      digitalWrite(relayPin[i], HIGH);
-      lampStatus[i] = true;
-      Serial.println(" :::: Вкл");
+      if (!lampOn)
+      {
+        digitalWrite(relayPin[i], HIGH);
+        lampStatus[i] = true;
+        Serial.println(" :::: Вкл");
+      }
+      else
+      {
+        digitalWrite(relayPin[i], LOW);
+        lampStatus[i] = false;
+        Serial.println(" :::: Откл");
+      }
     }
-    else
-    {
-      digitalWrite(relayPin[i], LOW);
-      lampStatus[i] = false;
-      Serial.println(" :::: Откл");
-    }
+break;
+  case 2:
+    break;
   }
 
   if (OTAEnabled)
