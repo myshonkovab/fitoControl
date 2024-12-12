@@ -224,14 +224,15 @@ void loop()
 
     // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
     float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+    browserString1 = String(parabFluxCalc) + " ";
     uint8_t parabFlux;
     if (parabFluxCalc > 0)
-      parabFlux = int(parabFlux);
+      parabFlux = int(round(parabFluxCalc));
     else
       parabFlux = 0;
     dali.transmit((adressParabFlux) << 1, parabFlux);
     Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString1 = String(currrentMin) + "Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux);
+    browserString1 = browserString1 + String(currrentMin) + "Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux);
     break;
   }
 
