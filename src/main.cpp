@@ -104,7 +104,10 @@ void Browser(bool lampPosition[4], String formattedTime, String browserString1, 
   {
     client.println("box" + String(i + 1) + " = " + String(!lampPosition[i]) + "<br>");
   }
-  client.println(browserString1);
+  client.println("<p>" + browserString1 + "</p>");
+
+  client.println("<p>" + browserString2 + "</p>");
+
   client.println("<br>");
   client.println("<br>");
   client.println("Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
@@ -251,15 +254,15 @@ void loop()
   case 2:
     byte ConstFlux = 0;
     if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
-      ConstFlux=maxConstFlux;
+      ConstFlux = maxConstFlux;
     else
       ConstFlux = 0;
     dali.transmit((adressConstFlux) << 1, ConstFlux);
     Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
+    browserString2 = "ConstFlux: adress = " + String(adressConstFlux) + " flux = " + String(ConstFlux);
 
     // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
     float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
-    browserString1 = String(parabFluxCalc) + " ";
     uint8_t parabFlux;
     if (parabFluxCalc > 0)
       parabFlux = int(round(parabFluxCalc));
@@ -267,7 +270,7 @@ void loop()
       parabFlux = 0;
     dali.transmit((adressParabFlux) << 1, parabFlux);
     Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString1 = browserString1 + String(currrentMin) + "Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux);
+    browserString1 =  String(currrentMin) + " <br> parabFlux: Адрес= " + String(adressParabFlux) + ". Поток= " + String(parabFlux);
     break;
   }
 
