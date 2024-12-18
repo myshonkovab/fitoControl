@@ -15,10 +15,10 @@ const bool wireEnabled = false;   //(для удобства скрытия бл
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
-const int DALI_TX = 1;    // A1
+const int DALI_TX = 2;    // A1
 const int DALI_RX_A = A0; // A2
 uint8_t adressConstFlux = 6;
-uint8_t maxCostFlux = 100;
+uint8_t maxConstFlux = 100;
 uint8_t adressParabFlux = 7;
 uint8_t maxParabFlux = 150;
 String browserString1;
@@ -43,8 +43,9 @@ const int timeSets[4][4][4] = {
     {{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}},
 };
 
-const char *ssid = "RT-GPON-37C8";   //"GonioRad2.4G";//"DIR-615T-74CC"; // ssid = "ROSTELECOM_CB50";  "DIR-615T-74CC"    "M-Redmi"
-const char *password = "Bgnagz3aL1"; //"astz2023";//"44220846";    // password = "734GFTCN";      "44220846"  "Moward-WiFi"
+const int countWiFiAcc = 3;
+const char *ssid[countWiFiAcc] = {"DIR-615T-74CC", "RT-GPON-37C8", "mab-mobile"}; //"GonioRad2.4G";//"DIR-615T-74CC"; // ssid = "ROSTELECOM_CB50";  "DIR-615T-74CC"    "M-Redmi"
+const char *password[countWiFiAcc] = {"44220846", "Bgnagz3aL1", "Moward-WiFi"};   //"astz2023";//"44220846";    // password = "734GFTCN";      "44220846"  "Moward-WiFi"
 
 // OTA
 #define OTAUSER "admin"                  // OTA Логин для входа в OTA
@@ -120,29 +121,59 @@ void setup()
 {
   timeClient.begin(); // NTPClient
   Serial.begin(9600);
-  while (!Serial)
-    delay(99); // ждем открытия монитора порта в IDE Arduino
+  /*
+    while (!Serial)
+      delay(99); // ждем открытия монитора порта в IDE Arduino
 
+    // подключаемся к WiFi-сети:
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("");
+    Serial.println("WiFi connected");
+  */
   // подключаемся к WiFi-сети:
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
 
-  // запускаем сервер:
-  server.begin();
-  Serial.println("Server started");
-  // печатаем IP-адрес:
-  Serial.print("Use this URL to connect: http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/");
+  for (int i = 0; i < countWiFiAcc; i++)
+  {
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid[i]);
+    WiFi.begin(ssid[i], password[i]);
+    int j = 0;
+    while (WiFi.status() != WL_CONNECTED & j < 20)
+    {
+      delay(500);
+      Serial.print(".");
+      j++;
+    }
+    if (WiFi.status() == WL_CONNECTED)
+      break;
+  }
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("");
+    Serial.println("WiFi connected");
+
+    // запускаем сервер:
+    server.begin();
+    Serial.println("Server started");
+    delay(1);
+    // печатаем IP-адрес:
+    Serial.print("Use this URL to connect: http://");
+    Serial.print(WiFi.localIP());
+    Serial.println("/");
+  }
+  else
+  {
+    Serial.print("Didnt connect to wifi");
+  };
 
   switch (typeLightCntrl)
   {
@@ -218,9 +249,13 @@ void loop()
     }
     break;
   case 2:
-
-    dali.transmit((adressConstFlux) << 1, maxCostFlux);
-    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(maxCostFlux));
+    byte ConstFlux = 0;
+    if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
+      ConstFlux=maxConstFlux;
+    else
+      ConstFlux = 0;
+    dali.transmit((adressConstFlux) << 1, ConstFlux);
+    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
 
     // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
     float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
