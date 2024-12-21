@@ -142,7 +142,7 @@ void setup()
     Serial.println("WiFi connected");
   */
   // подключаемся к WiFi-сети:
-
+delay(500);
   for (int i = 0; i < countWiFiAcc; i++)
   {
     Serial.println();

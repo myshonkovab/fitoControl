@@ -3,6 +3,12 @@ Control of growbox lightning
 
 old code and comments:
 
+запись pinMode(0, OUTPUT); означает обращение к порту GPIO0
+запись pinMode(D0, OUTPUT); означает обращение к порту D0 на плате
+
+
+https://chip2.ru/esp8266/esp8266-nodemcu-v3-lua/ - распиновка
+
 /* Turn on/off lamps for different periods
  */
 // Объем памяти EEPROM = 4096 Б ? In Arduino you call EEPROM.begin(), but in ESP8266 you have to call EEPROM.begin(n), where n is the total number of bytes you will need.
