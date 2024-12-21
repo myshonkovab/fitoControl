@@ -16,10 +16,10 @@ byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
 const int DALI_TX = 2;    // A1
-const int DALI_RX_A = A0; // A2
-uint8_t adressConstFlux = 6;
+const int DALI_RX_A = A0; // A0
+uint8_t adressConstFlux = 5;
+uint8_t adressParabFlux = 6;
 uint8_t maxConstFlux = 100;
-uint8_t adressParabFlux = 7;
 uint8_t maxParabFlux = 150;
 String browserString1;
 String browserString2;
@@ -124,23 +124,7 @@ void setup()
 {
   timeClient.begin(); // NTPClient
   Serial.begin(9600);
-  /*
-    while (!Serial)
-      delay(99); // ждем открытия монитора порта в IDE Arduino
-
-    // подключаемся к WiFi-сети:
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-      delay(500);
-      Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected");
-  */
+ 
   // подключаемся к WiFi-сети:
 delay(500);
   for (int i = 0; i < countWiFiAcc; i++)
