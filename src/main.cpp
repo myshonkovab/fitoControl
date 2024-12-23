@@ -15,7 +15,7 @@ const bool wireEnabled = false;   //(для удобства скрытия бл
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
-const int DALI_TX = 2;    // A1
+const int DALI_TX = D1;    // D1, GPIO5
 const int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 2;
@@ -128,7 +128,7 @@ void setup()
   Serial.begin(9600);
  
   // подключаемся к WiFi-сети:
-
+delay(500);
   for (int i = 0; i < countWiFiAcc; i++)
   {
     Serial.println();
@@ -141,6 +141,7 @@ void setup()
       delay(500);
       Serial.print(".");
       j++;
+      dali.transmit((adressParabFlux) << 1, 255);
     }
     if (WiFi.status() == WL_CONNECTED)
       break;
@@ -246,6 +247,7 @@ void loop()
     else
       ConstFlux = 0;
     dali.transmit((adressConstFlux) << 1, ConstFlux);
+    delay(200);
     Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
     browserString2 = "ConstFlux: adress = " + String(adressConstFlux) + " flux = " + String(ConstFlux);
 
