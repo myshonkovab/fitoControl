@@ -17,10 +17,12 @@ byte typeLightCntrl = 2;
 // 2 - dali const and parabolic illuminance
 const int DALI_TX = 2;    // A1
 const int DALI_RX_A = A0; // A0
+
+uint8_t adressBlue = 2;
 uint8_t adressConstFlux = 5;
 uint8_t adressParabFlux = 6;
-uint8_t maxConstFlux = 100;
-uint8_t maxParabFlux = 150;
+uint8_t maxConstFlux = 168;
+uint8_t maxParabFlux = 252;
 String browserString1;
 String browserString2;
 
@@ -236,6 +238,8 @@ void loop()
     }
     break;
   case 2:
+    dali.transmit((adressBlue) << 1, 0);
+    
     byte ConstFlux = 0;
     if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
       ConstFlux = maxConstFlux;
