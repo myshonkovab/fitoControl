@@ -18,9 +18,9 @@ byte typeLightCntrl = 2;
 const int DALI_TX = D1;    // D1, GPIO5
 const int DALI_RX_A = A0; // A0
 
-uint8_t adressBlue = 2;
-uint8_t adressConstFlux = 5;
-uint8_t adressParabFlux = 6;
+uint8_t adressBlue = 0;
+uint8_t adressConstFlux = 1;
+uint8_t adressParabFlux = 4;
 uint8_t maxConstFlux = 168;
 uint8_t maxParabFlux = 252;
 String browserString1;
@@ -240,6 +240,7 @@ void loop()
     break;
   case 2:
     dali.transmit((adressBlue) << 1, 0);
+    delay(200);
     
     byte ConstFlux = 0;
     if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
