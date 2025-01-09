@@ -1,6 +1,15 @@
 Control of growbox lightning
 
 
+1 - 1c
+2 - 2б - 1
+3 - 1к
+4 - 2к
+5 - 1б - 4
+6 - 2с
+
+
+
 old code and comments:
 
 запись pinMode(0, OUTPUT); означает обращение к порту GPIO0
