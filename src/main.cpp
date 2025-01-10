@@ -15,14 +15,14 @@ const bool wireEnabled = false;   //(для удобства скрытия бл
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
-const int DALI_TX = D1;    // D1, GPIO5
+const int DALI_TX = D1;   // D1, GPIO5
 const int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 0;
 uint8_t adressConstFlux = 1;
 uint8_t adressParabFlux = 4;
-uint8_t maxConstFlux = 168;
-uint8_t maxParabFlux = 252;
+int maxConstFlux = 200;
+int maxParabFlux = 300;
 String browserString1;
 String browserString2;
 
@@ -126,9 +126,9 @@ void setup()
 {
   timeClient.begin(); // NTPClient
   Serial.begin(9600);
- 
+
   // подключаемся к WiFi-сети:
-delay(500);
+  delay(500);
   for (int i = 0; i < countWiFiAcc; i++)
   {
     Serial.println();
@@ -241,27 +241,46 @@ void loop()
   case 2:
     dali.transmit((adressBlue) << 1, 0);
     delay(200);
-    
-    byte ConstFlux = 0;
+
+    int ConstFlux = 0;
+    byte ConstFluxCodeW = 0; // lum1 white
+
     if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
+    {
       ConstFlux = maxConstFlux;
+      ConstFluxCodeW = int(26.9 + 37.9 * log(ConstFlux));
+    }
     else
-      ConstFlux = 0;
-    dali.transmit((adressConstFlux) << 1, ConstFlux);
+      ConstFluxCodeW = 0;
+    dali.transmit((adressConstFlux) << 1, ConstFluxCodeW);
     delay(200);
     Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
-    browserString2 = "ConstFlux: adress = " + String(adressConstFlux) + " flux = " + String(ConstFlux);
+    browserString1 = String(currrentMin) +
+                     "<br> ConstFlux: adress = " + String(adressConstFlux) +
+                     " flux = " + String(ConstFlux) +
+                     " fluxCode = " + String(ConstFluxCodeW);
 
     // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
+    int parabFlux;
+    byte parabFluxCodeW = 0; // lum2 white
     float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
-    uint8_t parabFlux;
     if (parabFluxCalc > 0)
+    {
       parabFlux = int(round(parabFluxCalc));
+      parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
+    }
     else
+    {
       parabFlux = 0;
-    dali.transmit((adressParabFlux) << 1, parabFlux);
+      parabFluxCodeW = 0;
+    }
+
+    dali.transmit((adressParabFlux) << 1, parabFluxCodeW);
     Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString1 =  String(currrentMin) + " <br> parabFlux: Адрес= " + String(adressParabFlux) + ". Поток= " + String(parabFlux);
+    browserString2 = String(currrentMin) +
+                     " <br> parabFlux: Адрес= " + String(adressParabFlux) +
+                     ". flux = " + String(parabFlux) +
+                     ". fluxCode = " + String(parabFluxCodeW);
     break;
   }
 
