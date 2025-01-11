@@ -180,8 +180,9 @@ void setup()
     dali.setupTransmit(DALI_TX);        // устанавливаем цифровой выход для передачи сообщений
     dali.setupAnalogReceive(DALI_RX_A); // устанавливаем аналоговый вход для приема сообщений
     dali.msgMode = true;
-    dali.busTest(); // тестируем шину
-
+    // dali.busTest(); // тестируем шину
+    // dali.initialisation(); // Запустить инициализацию (присвоение коротких адресов).
+    // dali.scanShortAdd();
     break;
   }
 
