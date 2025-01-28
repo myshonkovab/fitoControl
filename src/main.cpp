@@ -3,6 +3,7 @@
 #include <ESP8266WiFi.h>             // OTA etc
 #include <ESP8266WebServer.h>        // OTA
 #include <ESP8266HTTPUpdateServer.h> //OTA
+#include <EEPROM.h>
 
 #include <browser.cpp>
 #include <Dali.h>
@@ -11,16 +12,24 @@
 const bool OTAEnabled = true;     // OTA
 const bool browserEnabled = true; // Включение выключение сервера (для удобства скрытия блоков кода)
 const bool wireEnabled = false;   //(для удобства скрытия блоков кода)
+bool ledInnStatus = true;
+
+byte relay1Addr=2; // 0 бит еепром
+byte relay2Addr;
+byte relay3Addr;
+byte relay4Addr;
+byte lum1Addr; // 4 byte of EEPROM
+byte lum2Addr;
 
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
-const int DALI_TX = D1;   // D1, GPIO5
+const int DALI_TX = D4;   // D1, GPIO5
 const int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 0;
-uint8_t adressConstFlux = 1;
-uint8_t adressParabFlux = 4;
+uint8_t adressConstFlux = 1; // 1
+uint8_t adressParabFlux = 5; // 5
 int maxConstFlux = 200;
 int maxParabFlux = 300;
 String browserString1;
@@ -67,56 +76,6 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 //=================================================
 
-WiFiServer server(80); //  порт веб-сервера
-
-void Browser(bool lampPosition[4], String formattedTime, String browserString1, String browserString2)
-{
-  Serial.println(" Вывод информации браузера");
-  unsigned int timer = millis();
-  WiFiClient client = server.available();
-  if (!client)
-  {
-    if (millis() > timer + 11 * 1000) // если клиент не отвалился через минуту
-    {
-      Serial.println("timer 11 s");
-      ESP.restart(); // перегружаемся
-    }
-    return;
-  }
-
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: text/html");
-  client.println(""); //  не забываем это...
-  client.println("<!DOCTYPE HTML>");
-  client.println("<html>");
-  client.println(" <head>");
-  client.println("  <meta charset=\"utf-8\">");
-  client.println("  <title>Гроубокс</title>");
-  client.println(" </head>");
-
-  client.println(" <body>");
-
-  client.println("IP: ");
-  client.print(WiFi.localIP());
-  client.println("<br>");
-
-  // Вывод текущих значений освещенности
-  client.println("Now " + formattedTime + "<br>");
-  for (int i = 0; i < 3; i++)
-  {
-    client.println("box" + String(i + 1) + " = " + String(!lampPosition[i]) + "<br>");
-  }
-  client.println("<p>" + browserString1 + "</p>");
-
-  client.println("<p>" + browserString2 + "</p>");
-
-  client.println("<br>");
-  client.println("<br>");
-  client.println("Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
-  client.println("</body>");
-  client.println("</html>");
-}
-
 void handleNotFound() // OTA
 {
   HttpServer.send(404, "text/plain", "404: Not found... <a href=\"/firmware\">firmware</a> <br>");
@@ -125,7 +84,10 @@ void handleNotFound() // OTA
 void setup()
 {
   timeClient.begin(); // NTPClient
+  EEPROM.begin(256);  // объем требуемой памяти
   Serial.begin(9600);
+  pinMode(2, OUTPUT);
+  digitalWrite(2, HIGH);
 
   // подключаемся к WiFi-сети:
   delay(500);
@@ -141,11 +103,15 @@ void setup()
       delay(500);
       Serial.print(".");
       j++;
-      dali.transmit((adressParabFlux) << 1, 255);
+      ledInnStatus = !ledInnStatus;
+      digitalWrite(2, ledInnStatus);
+
+      // ? что это? dali.transmit((adressParabFlux) << 1, 255);
     }
     if (WiFi.status() == WL_CONNECTED)
       break;
   }
+
   if (WiFi.status() == WL_CONNECTED)
   {
     Serial.println("");
@@ -200,6 +166,15 @@ void loop()
 
   timeClient.update(); // Обновление даты времени=============
   unsigned long currentTime = timeClient.getEpochTime();
+  //EEPROM.get(0, relay1Addr);
+  relay1Addr=EEPROM[0];
+  EEPROM.get(4, lum1Addr);
+  adressConstFlux=lum1Addr;
+  EEPROM.get(5, lum1Addr);
+  adressParabFlux=lum2Addr;
+
+  ledInnStatus = !ledInnStatus;
+  digitalWrite(2, ledInnStatus);
 
   Serial.println(timeClient.getFormattedTime());
   int currrentMin = (currentTime % 86400) / 60;
@@ -281,6 +256,17 @@ void loop()
                      " <br> parabFlux: Адрес= " + String(adressParabFlux) +
                      ". flux = " + String(parabFlux) +
                      ". fluxCode = " + String(parabFluxCodeW);
+
+    byte relay1level;
+    if (currrentMin % 60 > 5)
+      relay1level = 0;
+    else
+      relay1level = 254;
+    dali.transmit((relay1Addr) << 1, relay1level);
+    // Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
+    browserString2 = browserString2 +
+                     " <br> relay1: Адрес= " + String(relay1Addr) +
+                     ". level = " + String(relay1level);
     break;
   }
 
@@ -288,7 +274,83 @@ void loop()
   {
     HttpServer.handleClient(); // Прослушивание HTTP-запросов от клиентов
   }
-  delay(5 * 1000);
+
+  // ОБРАБОТКА ЗАПРОСОВ БРАУЗЕ
+  Serial.println("new client"); //   ждем, когда клиент отправит какие-нибудь данные: (пока данные не получены, скетч так и крутится на этом месте - не очень хорошо)
+
+  unsigned int timer = millis();
+  WiFiClient client = server.available(); // проверяем, подключен ли клиент
+  Serial.print("timer 3s start");
+  while (!client.available())
+  {
+    delay(1);
+    if ((millis()-timer)%1000 == 0) Serial.print(".");
+    if (millis() > timer + 3 * 1000) // если клиент не отвалился через минуту
+    {
+      Serial.println(" end");
+      break;
+      //  ESP.restart(); // перегружаемся
+    }
+  }
+
+  Serial.println();
+  String request = client.readStringUntil('\r'); // считываем первую строчку запроса:
+  client.flush();                                // сбрасывает все непрочитанные байты от сервера
+  Serial.println(request);
+
+  // обрабатываем запрос:
+  if (request.indexOf("/?command=") != -1)
+  {
+Serial.println("coommand");
+    if (request.indexOf("scanDALI") != -1)
+    {
+      dali.scanShortAdd();
+    }
+
+    if (request.indexOf("relay1Addr") != -1)
+    {
+      Serial.println("relay");
+      String s000 = request.substring(request.indexOf("relay1Addr") + 10);
+      Serial.println(s000);
+      if (s000.toInt() > 0)
+      {
+        relay1Addr = s000.toInt();
+        Serial.println(relay1Addr);
+        EEPROM.put(0, relay1Addr);
+        EEPROM.commit();
+        Serial.println("record");
+      }
+    }
+
+    if (request.indexOf("lum1Addr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("lum1Addr") + 8);
+      if (s000.toInt() > 0)
+      {
+        lum1Addr = s000.toInt();
+        EEPROM.put(4, lum1Addr);
+        EEPROM.commit();
+      }
+    }
+    if (request.indexOf("lum2Addr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("lum2Addr") + 8);
+      if (s000.toInt() > 0)
+      {
+        lum2Addr = s000.toInt();
+        EEPROM.put(5, lum2Addr);
+        EEPROM.commit();
+      }
+    }
+  }
+
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  delay(1);
+  client.stop();
+  Serial.println("Client disconnected");
+  Serial.println(""); //  "Клиент отключен"
 
   Browser(lampStatus, timeClient.getFormattedTime(), browserString1, browserString2);
+
+  // delay(5 * 1000);
 }
