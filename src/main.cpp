@@ -14,7 +14,7 @@ const bool browserEnabled = true; // Включение выключение с�
 const bool wireEnabled = false;   //(для удобства скрытия блоков кода)
 bool ledInnStatus = true;
 
-byte relay1Addr=2; // 0 бит еепром
+byte relay1Addr = 2; // 0 бит еепром
 byte relay2Addr;
 byte relay3Addr;
 byte relay4Addr;
@@ -24,8 +24,8 @@ byte lum2Addr;
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
-const int DALI_TX = D4;   // D1, GPIO5
-const int DALI_RX_A = A0; // A0
+int DALI_TX = D1;   // D1, GPIO5
+int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 0;
 uint8_t adressConstFlux = 1; // 1
@@ -87,7 +87,6 @@ void setup()
   EEPROM.begin(256);  // объем требуемой памяти
   Serial.begin(9600);
   pinMode(2, OUTPUT);
-  digitalWrite(2, HIGH);
 
   // подключаемся к WiFi-сети:
   delay(500);
@@ -141,6 +140,7 @@ void setup()
     break;
 
   case 2:
+    // DALI_TX=EEPROM[8];
     pinMode(DALI_TX, OUTPUT);
     Serial.println("start DALI control");
     dali.setupTransmit(DALI_TX);        // устанавливаем цифровой выход для передачи сообщений
@@ -164,24 +164,29 @@ void setup()
 
 void loop()
 {
-
   timeClient.update(); // Обновление даты времени=============
   unsigned long currentTime = timeClient.getEpochTime();
-  //EEPROM.get(0, relay1Addr);
-  relay1Addr=EEPROM[0];
-  EEPROM.get(4, lum1Addr);
-  adressConstFlux=lum1Addr;
-  EEPROM.get(5, lum1Addr);
-  adressParabFlux=lum2Addr;
 
-  ledInnStatus = !ledInnStatus;
-  digitalWrite(2, ledInnStatus);
+  byte brightMax = 0;
+  byte brightMed = 230;
+  byte brightMin = 254;
+  byte brightOff = 255;
+  analogWrite(2, brightMin);
 
+  relay1Addr = EEPROM[0];      // rel1
+  adressConstFlux = EEPROM[4]; // lum1
+  adressParabFlux = EEPROM[5]; // lum2
+  byte dali1pin = EEPROM[8];   //
+
+  if (daliScan)
+  {
+    dali.scanShortAdd();
+    daliScan = false;
+  }
   Serial.println(timeClient.getFormattedTime());
   int currrentMin = (currentTime % 86400) / 60;
-
   int currrentMin48h = (currentTime % 172800) / 60;
-  Serial.println(currrentMin48h);
+  // Serial.println(currrentMin48h);
 
   switch (typeLightCntrl)
   {
@@ -215,9 +220,6 @@ void loop()
     }
     break;
   case 2:
-    dali.transmit((adressBlue) << 1, 0);
-    delay(200);
-
     int ConstFlux = 0;
     byte ConstFluxCodeW = 0; // lum1 white
 
@@ -228,8 +230,12 @@ void loop()
     }
     else
       ConstFluxCodeW = 0;
+
+    analogWrite(2, brightMax);
     dali.transmit((adressConstFlux) << 1, ConstFluxCodeW);
+    digitalWrite(2, brightMin);
     delay(200);
+
     Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
     browserString1 = String(currrentMin) +
                      "<br> ConstFlux: adress = " + String(adressConstFlux) +
@@ -251,7 +257,11 @@ void loop()
       parabFluxCodeW = 0;
     }
 
+    analogWrite(2, brightMax);
     dali.transmit((adressParabFlux) << 1, parabFluxCodeW);
+    analogWrite(2, brightMin);
+    delay(200);
+
     Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
     browserString2 = String(currrentMin) +
                      " <br> parabFlux: Адрес= " + String(adressParabFlux) +
@@ -263,7 +273,12 @@ void loop()
       relay1level = 0;
     else
       relay1level = 254;
+
+    analogWrite(2, brightMax);
     dali.transmit((relay1Addr) << 1, relay1level);
+    analogWrite(2, brightMin);
+    delay(200);
+
     // Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
     browserString2 = browserString2 +
                      " <br> relay1: Адрес= " + String(relay1Addr) +
@@ -276,82 +291,12 @@ void loop()
     HttpServer.handleClient(); // Прослушивание HTTP-запросов от клиентов
   }
 
-  // ОБРАБОТКА ЗАПРОСОВ БРАУЗЕ
-  Serial.println("new client"); //   ждем, когда клиент отправит какие-нибудь данные: (пока данные не получены, скетч так и крутится на этом месте - не очень хорошо)
+  browserString2 = browserString2 +
+                   " <br> dali1pin: " + String(dali1pin);
 
-  unsigned int timer = millis();
-  WiFiClient client = server.available(); // проверяем, подключен ли клиент
-  Serial.print("timer 3s start");
-  while (!client.available())
-  {
-    delay(1);
-    if ((millis()-timer)%1000 == 0) Serial.print(".");
-    if (millis() > timer + 3 * 1000) // если клиент не отвалился через минуту
-    {
-      Serial.println(" end");
-      break;
-      //  ESP.restart(); // перегружаемся
-    }
-  }
-
-  Serial.println();
-  String request = client.readStringUntil('\r'); // считываем первую строчку запроса:
-  client.flush();                                // сбрасывает все непрочитанные байты от сервера
-  Serial.println(request);
-
-  // обрабатываем запрос:
-  if (request.indexOf("/?command=") != -1)
-  {
-Serial.println("coommand");
-    if (request.indexOf("scanDALI") != -1)
-    {
-      dali.scanShortAdd();
-    }
-
-    if (request.indexOf("relay1Addr") != -1)
-    {
-      Serial.println("relay");
-      String s000 = request.substring(request.indexOf("relay1Addr") + 10);
-      Serial.println(s000);
-      if (s000.toInt() > 0)
-      {
-        relay1Addr = s000.toInt();
-        Serial.println(relay1Addr);
-        EEPROM.put(0, relay1Addr);
-        EEPROM.commit();
-        Serial.println("record");
-      }
-    }
-
-    if (request.indexOf("lum1Addr") != -1)
-    {
-      String s000 = request.substring(request.indexOf("lum1Addr") + 8);
-      if (s000.toInt() > 0)
-      {
-        lum1Addr = s000.toInt();
-        EEPROM.put(4, lum1Addr);
-        EEPROM.commit();
-      }
-    }
-    if (request.indexOf("lum2Addr") != -1)
-    {
-      String s000 = request.substring(request.indexOf("lum2Addr") + 8);
-      if (s000.toInt() > 0)
-      {
-        lum2Addr = s000.toInt();
-        EEPROM.put(5, lum2Addr);
-        EEPROM.commit();
-      }
-    }
-  }
-
-  //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  delay(1);
-  client.stop();
-  Serial.println("Client disconnected");
-  Serial.println(""); //  "Клиент отключен"
-
+  analogWrite(2, brightMed);
   Browser(lampStatus, timeClient.getFormattedTime(), browserString1, browserString2);
+  analogWrite(2, brightMin);
 
-  // delay(5 * 1000);
+  delay(1 * 1000);
 }

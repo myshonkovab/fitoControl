@@ -2,6 +2,7 @@
 #include <ESP8266WebServer.h>        // OTA
 #include <ESP8266HTTPUpdateServer.h> //OTA
 //#include <settings.cpp>
+static bool daliScan;
  
  WiFiServer server(80); //  порт веб-сервера
  
@@ -18,8 +19,6 @@
     }
     return;
   }
-
-
 
 //CREATING WEB INTERFACE
   Serial.println(" Вывод информации браузера");
@@ -64,7 +63,64 @@
   client.println("Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
   client.println("</body>");
   client.println("</html>");
+
+
+
+
+  Serial.println("читываем первую строчку запроса:");
+  String request = client.readStringUntil('\r'); // считываем первую строчку запроса:
+  client.flush();                                // сбрасывает все непрочитанные байты от сервера
+  Serial.println(request);
   
+  // обрабатываем запрос:
+  if (request.indexOf("/?command=") != -1)
+  {
+    if (request.indexOf("scanDALI") != -1)
+    {
+     daliScan=true;
+    }
+
+    if (request.indexOf("relay1Addr") != -1)
+    {
+      Serial.println("relay");
+      String s000 = request.substring(request.indexOf("relay1Addr") + 10);
+      Serial.println(s000);
+      if (s000.toInt() > 0)
+      {
+        EEPROM.put(0, s000.toInt());
+        EEPROM.commit();
+      }
+    }
+
+    if (request.indexOf("lum1Addr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("lum1Addr") + 8);
+      if (s000.toInt() > 0)
+      {
+        EEPROM.put(4, s000.toInt());
+        EEPROM.commit();
+      }
+    }
+    if (request.indexOf("lum2Addr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("lum2Addr") + 8);
+      if (s000.toInt() > 0)
+      {
+        EEPROM.put(5, s000.toInt());
+        EEPROM.commit();
+      }
+    } if (request.indexOf("dali1pin") != -1)
+    {
+      String s000 = request.substring(request.indexOf("dali1pin") + 8);
+      if (s000.toInt() > 0)
+      {
+        EEPROM.put(8, s000.toInt());
+        EEPROM.commit();
+      }
+    }
+  }
+
+
   client.stop();
     Serial.println("browser client disconnected");
 }
