@@ -183,6 +183,7 @@ void loop()
     dali.scanShortAdd();
     daliScan = false;
   }
+
   Serial.println(timeClient.getFormattedTime());
   int currrentMin = (currentTime % 86400) / 60;
   int currrentMin48h = (currentTime % 172800) / 60;
@@ -219,6 +220,7 @@ void loop()
       }
     }
     break;
+    
   case 2:
    // dali.transmit((adressBlue) << 1, 0);
     delay(200);

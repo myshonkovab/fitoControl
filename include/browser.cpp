@@ -85,7 +85,7 @@ static bool daliScan;
       Serial.println("relay");
       String s000 = request.substring(request.indexOf("relay1Addr") + 10);
       Serial.println(s000);
-      if (s000.toInt() > 0)
+      if (s000.toInt() >= 0)
       {
         EEPROM.put(0, s000.toInt());
         EEPROM.commit();
@@ -95,7 +95,7 @@ static bool daliScan;
     if (request.indexOf("lum1Addr") != -1)
     {
       String s000 = request.substring(request.indexOf("lum1Addr") + 8);
-      if (s000.toInt() > 0)
+      if (s000.toInt() >= 0)
       {
         EEPROM.put(4, s000.toInt());
         EEPROM.commit();
@@ -104,7 +104,7 @@ static bool daliScan;
     if (request.indexOf("lum2Addr") != -1)
     {
       String s000 = request.substring(request.indexOf("lum2Addr") + 8);
-      if (s000.toInt() > 0)
+      if (s000.toInt() >= 0)
       {
         EEPROM.put(5, s000.toInt());
         EEPROM.commit();
@@ -112,7 +112,7 @@ static bool daliScan;
     } if (request.indexOf("dali1pin") != -1)
     {
       String s000 = request.substring(request.indexOf("dali1pin") + 8);
-      if (s000.toInt() > 0)
+      if (s000.toInt() >= 0)
       {
         EEPROM.put(8, s000.toInt());
         EEPROM.commit();
