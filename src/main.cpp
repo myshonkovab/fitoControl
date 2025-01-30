@@ -19,8 +19,8 @@ const int DALI_TX = D1;   // D1, GPIO5
 const int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 0;
-uint8_t adressConstFlux = 1;
-uint8_t adressParabFlux = 4;
+uint8_t adressConstFlux = 8; //lum1white
+uint8_t adressParabFlux = 0; //lum2white
 int maxConstFlux = 200;
 int maxParabFlux = 300;
 String browserString1;
@@ -240,7 +240,7 @@ void loop()
     }
     break;
   case 2:
-    dali.transmit((adressBlue) << 1, 0);
+   // dali.transmit((adressBlue) << 1, 0);
     delay(200);
 
     int ConstFlux = 0;

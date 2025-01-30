@@ -9,6 +9,9 @@ Control of growbox lightning
 6 - 2с
 
 
+1-2б-0
+9-1б-8
+
 
 old code and comments:
 
