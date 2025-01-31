@@ -21,6 +21,10 @@ byte relay4Addr;
 byte lum1Addr; // 4 byte of EEPROM
 byte lum2Addr;
 
+// EEPROM_Adress
+// 9 r3Period
+// 10 r3Duratn
+
 byte typeLightCntrl = 2;
 // 1 - 3box
 // 2 - dali const and parabolic illuminance
@@ -28,8 +32,8 @@ int DALI_TX = D1;   // D1, GPIO5
 int DALI_RX_A = A0; // A0
 
 uint8_t adressBlue = 0;
-uint8_t adressConstFlux = 8; //lum1white
-uint8_t adressParabFlux = 0; //lum2white
+uint8_t adressConstFlux = 8; // lum1white
+uint8_t adressParabFlux = 0; // lum2white
 int maxConstFlux = 200;
 int maxParabFlux = 300;
 String browserString1;
@@ -220,9 +224,9 @@ void loop()
       }
     }
     break;
-    
+
   case 2:
-   // dali.transmit((adressBlue) << 1, 0);
+    // dali.transmit((adressBlue) << 1, 0);
     delay(200);
 
     int ConstFlux = 0;
@@ -241,9 +245,10 @@ void loop()
     digitalWrite(2, brightMin);
     delay(200);
 
+    browserString1 = String(currrentMin);
+
     Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
-    browserString1 = String(currrentMin) +
-                     "<br> ConstFlux: adress = " + String(adressConstFlux) +
+    browserString2 = "<br> ConstFlux: adress = " + String(adressConstFlux) +
                      " flux = " + String(ConstFlux) +
                      " fluxCode = " + String(ConstFluxCodeW);
 
@@ -268,13 +273,18 @@ void loop()
     delay(200);
 
     Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString2 = String(currrentMin) +
+    browserString2 = browserString2 +
                      " <br> parabFlux: Адрес= " + String(adressParabFlux) +
                      ". flux = " + String(parabFlux) +
                      ". fluxCode = " + String(parabFluxCodeW);
 
+    browserString2 = browserString2 +
+                     " <br> Relay3 Period EEPROM[9] (min): " + String(EEPROM[9]);
+    browserString2 = browserString2 +
+                     " <br> Relay3 Duration EEPROM[10] (min): " + String(EEPROM[10]);
+
     byte relay1level;
-    if (currrentMin % 60 > 5)
+    if (currrentMin % EEPROM[9] > EEPROM[10])
       relay1level = 0;
     else
       relay1level = 254;
@@ -288,7 +298,8 @@ void loop()
     browserString2 = browserString2 +
                      " <br> relay1: Адрес= " + String(relay1Addr) +
                      ". level = " + String(relay1level);
-    break;
+
+    break; // nd of case 2
   }
 
   if (OTAEnabled)

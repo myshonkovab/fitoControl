@@ -1,12 +1,12 @@
- #include <ESP8266WiFi.h>             // OTA etc
+#include <ESP8266WiFi.h>             // OTA etc
 #include <ESP8266WebServer.h>        // OTA
 #include <ESP8266HTTPUpdateServer.h> //OTA
-//#include <settings.cpp>
+// #include <settings.cpp>
 static bool daliScan;
- 
- WiFiServer server(80); //  порт веб-сервера
- 
- void Browser(bool relayStatus[4], String formattedTime, String browserString1, String browserString2)
+
+WiFiServer server(80); //  порт веб-сервера
+
+void Browser(bool relayStatus[4], String formattedTime, String browserString1, String browserString2)
 {
   unsigned int timer = millis();
   WiFiClient client = server.available();
@@ -20,9 +20,9 @@ static bool daliScan;
     return;
   }
 
-//CREATING WEB INTERFACE
+  // CREATING WEB INTERFACE
   Serial.println(" Вывод информации браузера");
-  
+
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: text/html");
   client.println(""); //  не забываем это...
@@ -49,6 +49,7 @@ static bool daliScan;
   client.println("<input type=\"submit\" value=\"Send\" ");
   client.println("</form> </p>");
 
+  client.println("<p> Список команд: <br> scanDALI <br> relay1Addr <br> lum1Addr<br> lum1Addr<br> lum2Addr<br> r3Period<br> r3Duratn </p>");
 
   for (int i = 0; i < 3; i++)
   {
@@ -58,26 +59,20 @@ static bool daliScan;
 
   client.println("<p>" + browserString2 + "</p>");
 
-  client.println("<br>");
-  client.println("<br>");
-  client.println("Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
+  client.println("<br> <br> Click <a href=\":81/firmware\"> here to upload firmware </a> <br>");
   client.println("</body>");
   client.println("</html>");
 
-
-
-
-  Serial.println("читываем первую строчку запроса:");
   String request = client.readStringUntil('\r'); // считываем первую строчку запроса:
   client.flush();                                // сбрасывает все непрочитанные байты от сервера
   Serial.println(request);
-  
+
   // обрабатываем запрос:
   if (request.indexOf("/?command=") != -1)
   {
     if (request.indexOf("scanDALI") != -1)
     {
-     daliScan=true;
+      daliScan = true;
     }
 
     if (request.indexOf("relay1Addr") != -1)
@@ -87,7 +82,7 @@ static bool daliScan;
       Serial.println(s000);
       if (s000.toInt() >= 0)
       {
-        EEPROM.put(0, s000.toInt());
+        EEPROM[0] = s000.toInt();
         EEPROM.commit();
       }
     }
@@ -106,21 +101,42 @@ static bool daliScan;
       String s000 = request.substring(request.indexOf("lum2Addr") + 8);
       if (s000.toInt() >= 0)
       {
-        EEPROM.put(5, s000.toInt());
+        EEPROM[5] = s000.toInt();
         EEPROM.commit();
       }
-    } if (request.indexOf("dali1pin") != -1)
+    }
+    if (request.indexOf("dali1pin") != -1)
     {
       String s000 = request.substring(request.indexOf("dali1pin") + 8);
       if (s000.toInt() >= 0)
       {
-        EEPROM.put(8, s000.toInt());
+        EEPROM[8] = s000.toInt();
+        EEPROM.commit();
+      }
+    }
+    if (request.indexOf("r3Period") != -1)
+    {
+      Serial.println("relay");
+      String s000 = request.substring(request.indexOf("r3Period") + 8);
+      Serial.println(s000);
+      if (s000.toInt() >= 0)
+      {
+        EEPROM[9] = s000.toInt();
+        EEPROM.commit();
+      }
+    }
+    if (request.indexOf("r3Duratn") != -1)
+    {
+      Serial.println("relay");
+      String s000 = request.substring(request.indexOf("r3Duratn") + 8);
+      Serial.println(s000);
+      if (s000.toInt() >= 0)
+      {
+        EEPROM[10] = s000.toInt();
         EEPROM.commit();
       }
     }
   }
-
-
   client.stop();
-    Serial.println("browser client disconnected");
+  Serial.println("browser client disconnected");
 }
