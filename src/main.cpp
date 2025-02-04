@@ -20,6 +20,7 @@ byte relay3Addr;
 byte relay4Addr;
 byte lum1Addr; // 4 byte of EEPROM
 byte lum2Addr;
+/* byte lum3Addr*/
 
 // EEPROM_Adress
 // 9 r3Period
@@ -180,7 +181,7 @@ void loop()
   relay1Addr = EEPROM[0];      // rel1
   adressConstFlux = EEPROM[4]; // lum1
   adressParabFlux = EEPROM[5]; // lum2
-  byte dali1pin = EEPROM[8];   //
+  byte dali1pin = EEPROM[8];   // pin платы
 
   if (daliScan)
   {
@@ -260,7 +261,25 @@ void loop()
     {
       parabFlux = int(round(parabFluxCalc));
       parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
+    } 
+     // Объявление переменных
+    int parabFlux;
+    byte parabFluxCodeR = 0; // lamp2 red
+    float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+    // Условие для расчета parabFlux и parabFluxCodeR
+    if (parabFluxCalc > 0)
+    {
+    parabFlux = int(round(parabFluxCalc));
+    parabFluxCodeR = int(25.1 + 37.9 * log(parabFlux)); // Формула для красного цвета
     }
+    // Вывод информации в Serial Monitor
+    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
+
+    // Формирование HTML-строки для браузера
+    browserString2 = "<br> ConstFlux: adress = " + String(adressConstFlux) +
+    " flux = " + String(ConstFlux) +
+    " fluxCode = " + String(parabFluxCodeR); // Использование кода для красного цвета
+    } 
     else
     {
       parabFlux = 0;
