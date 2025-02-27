@@ -16,11 +16,12 @@ bool ledInnStatus = true;
 
 byte relay1Addr = 2; // 0 бит еепром
 byte relay2Addr;
-byte relay3Addr;
+byte relay3Addr = 6;
 byte relay4Addr;
-byte lum1Addr; // 4 byte of EEPROM
-byte lum2Addr;
-/* byte lum3Addr*/
+byte Lum1WhiteAdr = 9; // 4 byte of EEPROM
+byte Lum2WhiteAdr = 8;
+byte Lum1RedAdr = 1;
+byte Lum2RedAdr = 3;
 
 // EEPROM_Adress
 // 9 r3Period
@@ -35,8 +36,8 @@ int DALI_RX_A = A0; // A0
 uint8_t adressBlue = 0;
 uint8_t adressConstFlux = 8; // lum1white
 uint8_t adressParabFlux = 0; // lum2white
-int maxConstFlux = 200;
-int maxParabFlux = 300;
+int maxConstFlux = 100;
+int maxParabFlux = 150;
 String browserString1;
 String browserString2;
 
@@ -92,6 +93,17 @@ void setup()
   EEPROM.begin(256);  // объем требуемой памяти
   Serial.begin(9600);
   pinMode(2, OUTPUT);
+  EEPROM [0] = 5;
+  //EEPROM [1] = ;
+  //EEPROM [2] = ;
+  EEPROM [3] = 6;
+  //EEPROM [4] = ;
+  EEPROM [5] = 9;
+  //EEPROM [6] = ;
+  EEPROM [7] = 1;
+  EEPROM [8] = 8;
+  //EEPROM [9] = ;
+  EEPROM [10] = 3;
 
   // подключаемся к WiFi-сети:
   delay(500);
@@ -177,11 +189,13 @@ void loop()
   byte brightMin = 254;
   byte brightOff = 255;
   analogWrite(2, brightMin);
-
-  relay1Addr = EEPROM[0];      // rel1
-  adressConstFlux = EEPROM[4]; // lum1
-  adressParabFlux = EEPROM[5]; // lum2
-  byte dali1pin = EEPROM[8];   // pin платы
+  
+  relay3Addr = EEPROM [3];     
+  Lum1WhiteAdr = EEPROM [5];   
+  Lum1RedAdr = EEPROM [7];
+  Lum2WhiteAdr = EEPROM [8];
+  Lum2RedAdr = EEPROM [10];
+  byte dali1pin = EEPROM[0];   // pin платы
 
   if (daliScan)
   {
@@ -228,97 +242,129 @@ void loop()
 
   case 2:
     // dali.transmit((adressBlue) << 1, 0);
-    delay(200);
+delay(200);
 
-    int ConstFlux = 0;
-    byte ConstFluxCodeW = 0; // lum1 white
+// Управление постоянным белым светом
+int ConstFlux = 0;
+byte ConstFluxCodeW = 0; // lum1 white
 
-    if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
-    {
-      ConstFlux = maxConstFlux;
-      ConstFluxCodeW = int(26.9 + 37.9 * log(ConstFlux));
-    }
-    else
-      ConstFluxCodeW = 0;
+if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
+{
+    ConstFlux = maxConstFlux;
+    ConstFluxCodeW = int(26.9 + 37.9 * log(ConstFlux));
+}
+else
+    ConstFluxCodeW = 0;
 
-    analogWrite(2, brightMax);
-    dali.transmit((adressConstFlux) << 1, ConstFluxCodeW);
-    digitalWrite(2, brightMin);
-    delay(200);
+analogWrite(2, brightMax);
+dali.transmit((Lum1WhiteAdr) << 1, ConstFluxCodeW);
+digitalWrite(2, brightMin);
+delay(200);
 
-    browserString1 = String(currrentMin);
+browserString1 = String(currrentMin);
 
-    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
-    browserString2 = "<br> ConstFlux: adress = " + String(adressConstFlux) +
-                     " flux = " + String(ConstFlux) +
-                     " fluxCode = " + String(ConstFluxCodeW);
+Serial.println("Адрес: " + String(Lum1WhiteAdr) + ". Поток: " + String(ConstFlux));
+browserString2 = "<br> ConstFlux: adress = " + String(Lum1WhiteAdr) +
+                 " flux = " + String(ConstFlux) +
+                 " fluxCode = " + String(ConstFluxCodeW);
 
-    // parabFlux = maxParabFlux * (-(1 / (3600*49)) * (currrentMin48h - 14 * 60) *(currrentMin48h - 14 * 60) + 1);
-    int parabFlux;
-    byte parabFluxCodeW = 0; // lum2 white
-    float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
-    if (parabFluxCalc > 0)
-    {
-      parabFlux = int(round(parabFluxCalc));
-      parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
-    } 
-     // Объявление переменных
-    int parabFlux;
-    byte parabFluxCodeR = 0; // lamp2 red
-    float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
-    // Условие для расчета parabFlux и parabFluxCodeR
-    if (parabFluxCalc > 0)
-    {
+// Управление белым светом (параболический поток)
+int parabFlux;
+byte parabFluxCodeW = 0; // lum2 white
+float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+if (parabFluxCalc > 0)
+{
     parabFlux = int(round(parabFluxCalc));
-    parabFluxCodeR = int(25.1 + 37.9 * log(parabFlux)); // Формула для красного цвета
-    }
-    // Вывод информации в Serial Monitor
-    Serial.println("Адрес: " + String(adressConstFlux) + ". Поток: " + String(ConstFlux));
+    parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
+}
+else
+{
+    parabFlux = 0;
+    parabFluxCodeW = 0;
+}
 
-    // Формирование HTML-строки для браузера
-    browserString2 = "<br> ConstFlux: adress = " + String(adressConstFlux) +
-    " flux = " + String(ConstFlux) +
-    " fluxCode = " + String(parabFluxCodeR); // Использование кода для красного цвета
-    } 
-    else
-    {
-      parabFlux = 0;
-      parabFluxCodeW = 0;
-    }
+analogWrite(2, brightMax);
+dali.transmit((Lum2WhiteAdr) << 1, parabFluxCodeW);
+analogWrite(2, brightMin);
+delay(200);
 
-    analogWrite(2, brightMax);
-    dali.transmit((adressParabFlux) << 1, parabFluxCodeW);
-    analogWrite(2, brightMin);
-    delay(200);
+Serial.println("Адрес: " + String(Lum2WhiteAdr) + ". Поток: " + String(parabFlux));
+browserString2 = browserString2 +
+                 " <br> parabFlux: Адрес= " + String(Lum2WhiteAdr) +
+                 ". flux = " + String(parabFlux) +
+                 ". fluxCode = " + String(parabFluxCodeW);
 
-    Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString2 = browserString2 +
-                     " <br> parabFlux: Адрес= " + String(adressParabFlux) +
-                     ". flux = " + String(parabFlux) +
-                     ". fluxCode = " + String(parabFluxCodeW);
+// Управление постоянным красным светом
+int redConstFlux = 0;
+byte redConstFluxCode = 0; // Код для постоянного красного света
 
-    browserString2 = browserString2 +
-                     " <br> Relay3 Period EEPROM[9] (min): " + String(EEPROM[9]);
-    browserString2 = browserString2 +
-                     " <br> Relay3 Duration EEPROM[10] (min): " + String(EEPROM[10]);
+if (currrentMin >= 18 * 60 || currrentMin < 6 * 60) // Красный свет включен с 18:00 до 6:00
+{
+    redConstFlux = maxConstFlux;
+    redConstFluxCode = int(26.9 + 37.9 * log(redConstFlux)); // Формула для DALI
+}
+else
+{
+    redConstFlux = 0;
+    redConstFluxCode = 0; // Красный свет выключен
+}
 
-    byte relay1level;
-    if (currrentMin % EEPROM[9] > EEPROM[10])
-      relay1level = 0;
-    else
-      relay1level = 254;
+//Управление красным светом (параболический поток)
+int parabFlux;
+byte parabFluxCodeW = 0; // lum2 red
+float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+if (parabFluxCalc > 0)
+{
+    parabFlux = int(round(parabFluxCalc));
+    parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
+}
+else
+{
+    parabFlux = 0;
+    parabFluxCodeW = 0;
+}
 
-    analogWrite(2, brightMax);
-    dali.transmit((relay1Addr) << 1, relay1level);
-    analogWrite(2, brightMin);
-    delay(200);
+analogWrite(2, brightMax);
+dali.transmit((Lum2RedAdr) << 1, parabFluxCodeW);
+analogWrite(2, brightMin);
+delay(200);
 
-    // Serial.println("Адрес: " + String(adressParabFlux) + ". Поток: " + String(parabFlux));
-    browserString2 = browserString2 +
-                     " <br> relay1: Адрес= " + String(relay1Addr) +
-                     ". level = " + String(relay1level);
+Serial.println("Адрес: " + String(Lum2RedAdr) + ". Поток: " + String(parabFlux));
+browserString2 = browserString2 +
+                 " <br> parabFlux: Адрес= " + String(Lum2RedAdr) +
+                 ". flux = " + String(parabFlux) +
+                 ". fluxCode = " + String(parabFluxCodeW);
 
-    break; // nd of case 2
+// Передача команды для постоянного красного света
+analogWrite(2, brightMax);
+dali.transmit((Lum1RedAdr) << 1, redConstFluxCode);
+analogWrite(2, brightMin);
+delay(200);
+
+// Логирование и формирование строки для веб-интерфейса
+Serial.println("Адрес: " + String(Lum1RedAdr) + ". Поток (красный постоянный): " + String(redConstFlux));
+browserString2 = browserString2 +
+                 " <br> Red Const Flux: Адрес= " + String(Lum1RedAdr) +
+                 ". flux = " + String(redConstFlux) +
+                 ". fluxCode = " + String(redConstFluxCode);
+
+// Управление реле
+byte relay1level;
+if (currrentMin % EEPROM[9] > EEPROM[10])
+    relay1level = 0;
+else
+    relay1level = 254;
+
+analogWrite(2, brightMax);
+dali.transmit((relay1Addr) << 1, relay1level);
+analogWrite(2, brightMin);
+delay(200);
+
+browserString2 = browserString2 +
+                 " <br> relay1: Адрес= " + String(relay1Addr) +
+                 ". level = " + String(relay1level);
+
+break; // end case 2
   }
 
   if (OTAEnabled)
