@@ -96,18 +96,19 @@ void setup()
   EEPROM.begin(256);  // объем требуемой памяти
   Serial.begin(9600);
   pinMode(2, OUTPUT);
-  EEPROM [0] = 5;
+  EEPROM [0] = D1;  // Dali Pin (D1=5)
   //EEPROM [1] = ;
   //EEPROM [2] = ;
-  EEPROM [3] = 6;
+  EEPROM [3] = 5; // rel 3
   //EEPROM [4] = ;
-  EEPROM [5] = 9;
+  EEPROM [5] = 8; // LumWhite1
   //EEPROM [6] = ;
-  EEPROM [7] = 1;
-  EEPROM [8] = 8;
+  EEPROM [7] = 0; // Lum
+  EEPROM [8] = 7;
   //EEPROM [9] = ;
-  EEPROM [10] = 3;
-
+  EEPROM [10] = 2;
+  EEPROM [11] = 60; // period min
+  EEPROM [12] = 5; // duration min
   // подключаемся к WiFi-сети:
   delay(500);
   for (int i = 0; i < countWiFiAcc; i++)
@@ -356,20 +357,20 @@ browserString2 = browserString2 +
                  ". fluxCode = " + String(redParabFluxCode);
 
 // Управление реле
-byte relay1level;
-if (currrentMin % EEPROM[9] > EEPROM[10])
-    relay1level = 0;
+byte relay3level;
+if (currrentMin % EEPROM[11] > EEPROM[12])
+    relay3level = 0;
 else
-    relay1level = 254;
+    relay3level = 254;
 
 analogWrite(2, brightMax);
-dali.transmit((relay1Addr) << 1, relay1level);
+dali.transmit((relay3Addr) << 1, relay3level);
 analogWrite(2, brightMin);
 delay(200);
 
 browserString2 = browserString2 +
-                 " <br> relay1: Адрес= " + String(relay1Addr) +
-                 ". level = " + String(relay1level);
+                 " <br> relay1: Адрес= " + String(relay3Addr) +
+                 ". level = " + String(relay3level);
 
 break; // end case 2
   }

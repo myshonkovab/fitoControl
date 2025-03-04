@@ -49,7 +49,7 @@ void Browser(bool relayStatus[4], String formattedTime, String browserString1, S
   client.println("<input type=\"submit\" value=\"Send\" ");
   client.println("</form> </p>");
 
-  client.println("<p> Список команд: <br> scanDALI <br> relay1Addr <br> lum1Addr<br> lum1Addr<br> lum2Addr<br> r3Period<br> r3Duratn </p>");
+  client.println("<p> Список команд: <br> scanDALI <br> dali1pin <br> rel3Addr<br> Lum1WAdr<br> Lum1RAdr<br> Lum2WAdr<br> Lum2RAdr<br>  r3Period<br> r3Duratn</p>");
 
   for (int i = 0; i < 3; i++)
   {
@@ -74,65 +74,81 @@ void Browser(bool relayStatus[4], String formattedTime, String browserString1, S
     {
       daliScan = true;
     }
-
-    if (request.indexOf("relay1Addr") != -1)
+    if (request.indexOf("dali1pin") != -1)
     {
-      Serial.println("relay");
-      String s000 = request.substring(request.indexOf("relay1Addr") + 10);
-      Serial.println(s000);
+      String s000 = request.substring(request.indexOf("dali1pin") + 8);
       if (s000.toInt() >= 0)
       {
         EEPROM[0] = s000.toInt();
         EEPROM.commit();
       }
     }
-
-    if (request.indexOf("lum1Addr") != -1)
+    if (request.indexOf("rel3Addr") != -1)
     {
-      String s000 = request.substring(request.indexOf("lum1Addr") + 8);
+      Serial.println("rel3Addr");
+      String s000 = request.substring(request.indexOf("rel3Addr") + 8);
+      Serial.println(s000);
       if (s000.toInt() >= 0)
       {
-        EEPROM.put(4, s000.toInt());
+        EEPROM[3] = s000.toInt();
         EEPROM.commit();
       }
     }
-    if (request.indexOf("lum2Addr") != -1)
+    if (request.indexOf("Lum1WAdr") != -1)
     {
-      String s000 = request.substring(request.indexOf("lum2Addr") + 8);
+      String s000 = request.substring(request.indexOf("Lum1WAdr") + 8);
       if (s000.toInt() >= 0)
       {
         EEPROM[5] = s000.toInt();
         EEPROM.commit();
       }
     }
-    if (request.indexOf("dali1pin") != -1)
+    if (request.indexOf("Lum1RAdr") != -1)
     {
-      String s000 = request.substring(request.indexOf("dali1pin") + 8);
+      String s000 = request.substring(request.indexOf("Lum1RAdr") + 8);
+      if (s000.toInt() >= 0)
+      {
+        EEPROM[7] = s000.toInt();
+        EEPROM.commit();
+      }
+    }
+    if (request.indexOf("Lum2WAdr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("Lum2WAdr") + 8);
       if (s000.toInt() >= 0)
       {
         EEPROM[8] = s000.toInt();
         EEPROM.commit();
       }
     }
+    if (request.indexOf("Lum2RAdr") != -1)
+    {
+      String s000 = request.substring(request.indexOf("Lum2RAdr") + 8);
+      if (s000.toInt() >= 0)
+      {
+        EEPROM[10] = s000.toInt();
+        EEPROM.commit();
+      }
+    }
     if (request.indexOf("r3Period") != -1)
     {
-      Serial.println("relay");
+      Serial.println("r3Period");
       String s000 = request.substring(request.indexOf("r3Period") + 8);
       Serial.println(s000);
       if (s000.toInt() >= 0)
       {
-        EEPROM[9] = s000.toInt();
+        EEPROM[11] = s000.toInt();
         EEPROM.commit();
       }
     }
     if (request.indexOf("r3Duratn") != -1)
     {
-      Serial.println("relay");
+      Serial.println("r3Duratn");
       String s000 = request.substring(request.indexOf("r3Duratn") + 8);
       Serial.println(s000);
       if (s000.toInt() >= 0)
       {
-        EEPROM[10] = s000.toInt();
+        EEPROM[12] = s000.toInt();
         EEPROM.commit();
       }
     }
