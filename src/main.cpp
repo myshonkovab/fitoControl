@@ -36,8 +36,11 @@ int DALI_RX_A = A0; // A0
 uint8_t adressBlue = 0;
 uint8_t adressConstFlux = 8; // lum1white
 uint8_t adressParabFlux = 0; // lum2white
-int maxConstFlux = 100;
-int maxParabFlux = 150;
+int maxConstFluxWhite = 100;
+int maxParabFluxWhite = 150;
+int maxConstFluxRed = 100;
+int maxParabFluxRed = 150;
+
 String browserString1;
 String browserString2;
 
@@ -241,7 +244,7 @@ void loop()
     break;
 
   case 2:
-    // dali.transmit((adressBlue) << 1, 0);
+  // dali.transmit((adressBlue) << 1, 0);
 delay(200);
 
 // Управление постоянным белым светом
@@ -250,7 +253,7 @@ byte ConstFluxCodeW = 0; // lum1 white
 
 if (currrentMin >= 7 * 60 & currrentMin < 21 * 60)
 {
-    ConstFlux = maxConstFlux;
+    ConstFlux = maxConstFluxWhite;
     ConstFluxCodeW = int(26.9 + 37.9 * log(ConstFlux));
 }
 else
@@ -271,7 +274,7 @@ browserString2 = "<br> ConstFlux: adress = " + String(Lum1WhiteAdr) +
 // Управление белым светом (параболический поток)
 int parabFlux;
 byte parabFluxCodeW = 0; // lum2 white
-float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+float parabFluxCalc = (maxParabFluxWhite * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
 if (parabFluxCalc > 0)
 {
     parabFlux = int(round(parabFluxCalc));
@@ -300,7 +303,7 @@ byte redConstFluxCode = 0; // Код для постоянного красно�
 
 if (currrentMin >= 18 * 60 || currrentMin < 6 * 60) // Красный свет включен с 18:00 до 6:00
 {
-    redConstFlux = maxConstFlux;
+    redConstFlux = maxConstFluxWhite;
     redConstFluxCode = int(26.9 + 37.9 * log(redConstFlux)); // Формула для DALI
 }
 else
@@ -308,32 +311,6 @@ else
     redConstFlux = 0;
     redConstFluxCode = 0; // Красный свет выключен
 }
-
-//Управление красным светом (параболический поток)
-int parabFlux;
-byte parabFluxCodeW = 0; // lum2 red
-float parabFluxCalc = (maxParabFlux * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
-if (parabFluxCalc > 0)
-{
-    parabFlux = int(round(parabFluxCalc));
-    parabFluxCodeW = int(25.1 + 37.9 * log(parabFlux));
-}
-else
-{
-    parabFlux = 0;
-    parabFluxCodeW = 0;
-}
-
-analogWrite(2, brightMax);
-dali.transmit((Lum2RedAdr) << 1, parabFluxCodeW);
-analogWrite(2, brightMin);
-delay(200);
-
-Serial.println("Адрес: " + String(Lum2RedAdr) + ". Поток: " + String(parabFlux));
-browserString2 = browserString2 +
-                 " <br> parabFlux: Адрес= " + String(Lum2RedAdr) +
-                 ". flux = " + String(parabFlux) +
-                 ". fluxCode = " + String(parabFluxCodeW);
 
 // Передача команды для постоянного красного света
 analogWrite(2, brightMax);
@@ -347,6 +324,36 @@ browserString2 = browserString2 +
                  " <br> Red Const Flux: Адрес= " + String(Lum1RedAdr) +
                  ". flux = " + String(redConstFlux) +
                  ". fluxCode = " + String(redConstFluxCode);
+
+// Управление параболическим красным светом
+int redParabFlux = 0;
+byte redParabFluxCode = 0; // Код для параболического красного света
+
+// Расчет светового потока для параболического красного света
+float redParabFluxCalc = (maxParabFluxRed * (1 - sq(float(currrentMin) - 14 * 60) / (3600 * 49)));
+if (redParabFluxCalc > 0)
+{
+    redParabFlux = int(round(redParabFluxCalc));
+    redParabFluxCode = int(25.1 + 37.9 * log(redParabFlux)); // Формула для DALI
+}
+else
+{
+    redParabFlux = 0;
+    redParabFluxCode = 0; // Красный свет выключен
+}
+
+// Передача команды для параболического красного света
+analogWrite(2, brightMax);
+dali.transmit((Lum2RedAdr) << 1, redParabFluxCode);
+analogWrite(2, brightMin);
+delay(200);
+
+// Логирование и формирование строки для веб-интерфейса
+Serial.println("Адрес: " + String(Lum2RedAdr) + ". Поток (красный параболический): " + String(redParabFlux));
+browserString2 = browserString2 +
+                 " <br> Red Parab Flux: Адрес= " + String(Lum2RedAdr) +
+                 ". flux = " + String(redParabFlux) +
+                 ". fluxCode = " + String(redParabFluxCode);
 
 // Управление реле
 byte relay1level;
