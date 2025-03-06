@@ -245,7 +245,7 @@ void loop()
     break;
 
   case 2:
-  // dali.transmit((adressBlue) << 1, 0);
+  
 delay(200);
 
 // Управление постоянным белым светом
@@ -302,10 +302,10 @@ browserString2 = browserString2 +
 int redConstFlux = 0;
 byte redConstFluxCode = 0; // Код для постоянного красного света
 
-if (currrentMin >= 18 * 60 || currrentMin < 6 * 60) // Красный свет включен с 18:00 до 6:00
+if (currrentMin >= 7 * 60 || currrentMin < 21 * 60) // Красный свет включен с 7:00 до 21:00
 {
     redConstFlux = maxConstFluxWhite;
-    redConstFluxCode = int(26.9 + 37.9 * log(redConstFlux)); // Формула для DALI
+    redConstFluxCode = int(39.8 + 37.1 * log(redConstFlux)); // Формула для DALI
 }
 else
 {
@@ -335,7 +335,7 @@ float redParabFluxCalc = (maxParabFluxRed * (1 - sq(float(currrentMin) - 14 * 60
 if (redParabFluxCalc > 0)
 {
     redParabFlux = int(round(redParabFluxCalc));
-    redParabFluxCode = int(25.1 + 37.9 * log(redParabFlux)); // Формула для DALI
+    redParabFluxCode = int(39.3 + 37.1 * log(redParabFlux)); // Формула для DALI
 }
 else
 {
