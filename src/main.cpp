@@ -302,7 +302,7 @@ browserString2 = browserString2 +
 int redConstFlux = 0;
 byte redConstFluxCode = 0; // Код для постоянного красного света
 
-if (currrentMin >= 7 * 60 || currrentMin < 21 * 60) // Красный свет включен с 7:00 до 21:00
+if (currrentMin >= 7 * 60 & currrentMin < 21 * 60) // Красный свет включен с 7:00 до 21:00
 {
     redConstFlux = maxConstFluxWhite;
     redConstFluxCode = int(39.8 + 37.1 * log(redConstFlux)); // Формула для DALI
